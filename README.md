@@ -29,3 +29,7 @@ npx quartz build --serve   # abre http://localhost:8080
 
 - En **Settings → Pages**, selecciona **Source = GitHub Actions**.
 - El workflow `./.github/workflows/deploy-pages.yml` compila `site/` y despliega.
+
+## Caso elegido
+
+- Encuestas mensuales (Excel → CSV/Parquet)
