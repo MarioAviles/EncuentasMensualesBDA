@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Configuración básica
 np.random.seed(datetime.now().month)  # genera distinto cada mes
-N = 5_000  # número de datos a generar
+N = 100_000  # número de datos a generar
 
 # Configuración de rutas
 BASE_DIR = Path(__file__).resolve().parent.parent
