@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+      <title>Quartz 4</title>
+      <link>https://quartz.jzhao.xyz</link>
+      <description>Last 10 notes on Quartz 4</description>
+      <generator>Quartz -- quartz.jzhao.xyz</generator>
+      <item>
+    <title>reporte_historico_ba382d67-2779-44c9-a87d-a0bfd96113ee</title>
+    <link>https://quartz.jzhao.xyz/reportes/reporte_historico_ba382d67-2779-44c9-a87d-a0bfd96113ee</link>
+    <guid>https://quartz.jzhao.xyz/reportes/reporte_historico_ba382d67-2779-44c9-a87d-a0bfd96113ee</guid>
+    <description><![CDATA[ Reporte · Encuestas de Satisfacción Periodo: 2025-11-01 → 2025-11-30 Generado: 2025-11-09T18:49:19.731935+00:00 Total encuestas: 2,210 Distribución 1–10 (%) 12345678910(‘Atencion’, ‘Atencion’)7.296.9311.0511.2811.9912.8111.1610.699.177.64(‘Postventa’, ‘Postventa’)4.818.656.738.6513.4612.514.4213.949... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 18:49:19 GMT</pubDate>
+  </item><item>
+    <title>99-lecciones-aprendidas</title>
+    <link>https://quartz.jzhao.xyz/docs/99-lecciones-aprendidas</link>
+    <guid>https://quartz.jzhao.xyz/docs/99-lecciones-aprendidas</guid>
+    <description><![CDATA[ Lecciones aprendidas Qué salió bien Automatización completa del flujo ETL: desde la generación de encuestas hasta el reporte final, sin intervención manual. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:39:28 GMT</pubDate>
+  </item><item>
+    <title>00-README-encuestas</title>
+    <link>https://quartz.jzhao.xyz/docs/00-README-encuestas</link>
+    <guid>https://quartz.jzhao.xyz/docs/00-README-encuestas</guid>
+    <description><![CDATA[ Encuestas Mensuales Este directorio recopila las notas y plantillas que acompañan al proyecto. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:33:11 GMT</pubDate>
+  </item><item>
+    <title>40-reporte-informe_calidad</title>
+    <link>https://quartz.jzhao.xyz/docs/40-reporte-informe_calidad</link>
+    <guid>https://quartz.jzhao.xyz/docs/40-reporte-informe_calidad</guid>
+    <description><![CDATA[ Diseño de reporte e informe de calidad Reporte histórico (reporte_historico_*.md) Descripción El sistema genera automáticamente un reporte histórico consolidado con todos los lotes procesados (clean_encuestas_*.parquet). ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:27:35 GMT</pubDate>
+  </item><item>
+    <title>30-persistencia-quarantine</title>
+    <link>https://quartz.jzhao.xyz/docs/30-persistencia-quarantine</link>
+    <guid>https://quartz.jzhao.xyz/docs/30-persistencia-quarantine</guid>
+    <description><![CDATA[ Uso de persistencia y cuarentena Persistencia principal La persistencia se realiza en SQLite bajo la carpeta output/sql/, asegurando trazabilidad total y almacenamiento histórico de todas las ejecuciones de ingesta. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:20:17 GMT</pubDate>
+  </item><item>
+    <title>20-limpieza-calidad</title>
+    <link>https://quartz.jzhao.xyz/docs/20-limpieza-calidad</link>
+    <guid>https://quartz.jzhao.xyz/docs/20-limpieza-calidad</guid>
+    <description><![CDATA[ Reglas de limpieza y calidad Tipos y formatos fecha: ISO (YYYY-MM-DD) convertida con pd.to_datetime(errors=&#039;coerce&#039;) edad: entero entre 18 y 65 (valores fuera o nulos se excluyen) satisfaccion: entero entre 1 y 10 (valores fuera de rango o “NS/NC” → enviados a cuarentena) area: texto limpi... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:14:51 GMT</pubDate>
+  </item><item>
+    <title>10-diseno-ingesta</title>
+    <link>https://quartz.jzhao.xyz/docs/10-diseno-ingesta</link>
+    <guid>https://quartz.jzhao.xyz/docs/10-diseno-ingesta</guid>
+    <description><![CDATA[ Diseño de ingestión Resumen La ingesta consiste en la lectura y procesamiento de encuestas de satisfacción simuladas, generadas mensualmente en formato Excel (para uso humano) y exportadas automáticamente a CSV homogéneo. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 17:12:35 GMT</pubDate>
+  </item><item>
+    <title>Bienvenido a la documentación!</title>
+    <link>https://quartz.jzhao.xyz/</link>
+    <guid>https://quartz.jzhao.xyz/</guid>
+    <description><![CDATA[ Aquí encontrarás toda la información sobre como he realizado el proyecto y como se han implementado las distintas fases. ]]></description>
+    <pubDate>Wed, 23 Aug 2023 19:09:04 GMT</pubDate>
+  </item>
+    </channel>
+  </rss>
