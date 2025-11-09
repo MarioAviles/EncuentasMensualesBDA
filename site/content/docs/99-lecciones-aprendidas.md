@@ -34,9 +34,6 @@
 - **Capturas de `Actions` (build Quartz):**  
   Evidencias visuales de la ejecución automática de los scripts y generación de reportes.
 
-- **Fragmentos de log con errores resueltos:**  
-  Ejemplo de errores detectados durante desarrollo y su corrección:
-
 - **Evidencias de ejecución correcta:**  
 - `encuestas_limpias.csv` generado con 0 duplicados  
 - `informe_calidad_<batch>.xlsx` con validaciones correctas  
