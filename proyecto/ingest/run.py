@@ -2,6 +2,7 @@ import pandas as pd, numpy as np, sqlite3, unicodedata
 from pathlib import Path
 from datetime import datetime, timezone
 import uuid
+import hashlib, os
 
 # ================================================================
 # CONFIGURACIÓN GLOBAL
@@ -18,7 +19,10 @@ COLS = ['id_respuesta', 'fecha', 'edad', 'area', 'satisfaccion', 'comentario']
 print("\n===== [1] INGESTA =====")
 csvs = sorted(DROPS.glob("*/encuestas.csv"))
 if not csvs: raise FileNotFoundError("⚠️ No se encontró 'encuestas.csv' en data/drops/")
-csv, batch, ts = csvs[-1], str(uuid.uuid4()), datetime.now().isoformat()
+csv = csvs[-1]
+hash_input = f"{csv.name}_{os.path.getsize(csv)}_{os.path.getmtime(csv)}"
+batch = hashlib.md5(hash_input.encode()).hexdigest()
+ts = datetime.now().isoformat()
 
 df = pd.read_csv(csv, dtype=str)
 for c in COLS: df[c] = df.get(c, np.nan)
