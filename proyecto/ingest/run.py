@@ -77,7 +77,6 @@ df_clean.to_csv(clean_csv, index=False, encoding="utf-8", na_rep=" ", quoting=1)
 print(f"✅ Limpios: {len(df_clean):,} | ⚠️ Cuarentena: {len(df_quar):,} | 🗑️ Descartadas (satisf. nula): {len(df_descartadas):,}")
 print(f"📁 CSV limpio: {clean_csv}")
 
-
 # ================================================================
 # 3️⃣ PERSISTENCIA
 # ================================================================
@@ -87,9 +86,16 @@ con = sqlite3.connect(SQL / "raw_encuestas.db")
 tablas = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", con)
 if "clean_encuestas" in tablas["name"].values:
     batches = pd.read_sql("SELECT DISTINCT _batch_id FROM clean_encuestas", con)
+    # IDEMPOTENCIA por batch_id
     if batch in batches["_batch_id"].values:
         print(f"⛔ Batch {batch} ya procesado. Abortando inserción.")
-        con.close(); exit()
+        con.close()
+        exit()
+
+# DEDUPLICACIÓN por id_respuesta (mantiene la última)
+df_clean = df_clean.drop_duplicates(subset=['id_respuesta'], keep='last')
+df_quar = df_quar.drop_duplicates(subset=['id_respuesta'], keep='last')
+df = df.drop_duplicates(subset=['id_respuesta'], keep='last')
 
 # RAW: sin trazabilidad
 df[COLS].to_sql("raw_encuestas", con, if_exists="append", index=False)
@@ -98,8 +104,9 @@ dfc = df_clean.assign(_batch_id=batch, _source_file=csv.name, _ingest_ts=ts)
 dfc.to_sql("clean_encuestas", con, if_exists="append", index=False)
 # QUARANTINE: con causa
 if not df_quar.empty:
-    df_quar[COLS+['causa']].to_sql("quarantine_encuestas", con, if_exists="append", index=False)
-con.commit(); con.close()
+    df_quar[COLS + ['causa']].to_sql("quarantine_encuestas", con, if_exists="append", index=False)
+con.commit()
+con.close()
 print("✅ SQLite actualizado")
 
 # Convertir satisfaccion a string antes de exportar a Parquet (evita ArrowTypeError)
@@ -111,6 +118,7 @@ dfc.to_parquet(PARQ / f"clean_encuestas_{batch}.parquet", index=False)
 if not df_quar.empty:
     df_quar.to_parquet(PARQ / f"quarantine_encuestas_{batch}.parquet", index=False)
 
+print("✅ Exportación Parquet completada")
 print("✅ Exportación Parquet completada")
 
 # ================================================================
