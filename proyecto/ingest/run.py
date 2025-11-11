@@ -20,7 +20,7 @@ print("\n===== [1] INGESTA =====")
 csvs = sorted(DROPS.glob("*/encuestas.csv"))
 if not csvs: raise FileNotFoundError("⚠️ No se encontró 'encuestas.csv' en data/drops/")
 csv = csvs[-1]
-hash_input = f"{csv.name}_{os.path.getsize(csv)}_{os.path.getmtime(csv)}"
+hash_input = f"{csv.name}_{os.path.getsize(csv)}_{datetime.timestamp(datetime.now())}"
 batch = hashlib.md5(hash_input.encode()).hexdigest()
 ts = datetime.now().isoformat()
 
@@ -87,49 +87,107 @@ print(f"📁 CSV limpio: {clean_csv}")
 print("\n===== [3] PERSISTENCIA =====")
 con = sqlite3.connect(SQL / "raw_encuestas.db")
 
-tablas = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", con)
-if "clean_encuestas" in tablas["name"].values:
-    batches = pd.read_sql("SELECT DISTINCT _batch_id FROM clean_encuestas", con)
-    # IDEMPOTENCIA por batch_id
-    if batch in batches["_batch_id"].values:
-        print(f"⛔ Batch {batch} ya procesado. Abortando inserción.")
-        con.close()
-        exit()
+# Crear tablas si no existen
+con.execute("""
+    CREATE TABLE IF NOT EXISTS raw_encuestas (
+        id_respuesta TEXT PRIMARY KEY,
+        fecha TEXT, edad INTEGER, area TEXT, satisfaccion INTEGER, comentario TEXT
+    )
+""")
+con.execute("""
+    CREATE TABLE IF NOT EXISTS clean_encuestas (
+        id_respuesta TEXT PRIMARY KEY,
+        fecha TEXT, edad INTEGER, area TEXT, satisfaccion INTEGER, comentario TEXT,
+        _batch_id TEXT, _source_file TEXT, _ingest_ts TEXT
+    )
+""")
+con.execute("""
+    CREATE TABLE IF NOT EXISTS quarantine_encuestas (
+        id_respuesta TEXT PRIMARY KEY,
+        fecha TEXT, edad INTEGER, area TEXT, satisfaccion INTEGER, comentario TEXT, causa TEXT
+    )
+""")
+con.commit()
 
-# DEDUPLICACIÓN por id_respuesta (mantiene la última)
-df_clean = df_clean.drop_duplicates(subset=['id_respuesta'], keep='last')
-df_quar = df_quar.drop_duplicates(subset=['id_respuesta'], keep='last')
-df = df.drop_duplicates(subset=['id_respuesta'], keep='last')
+# Obtener IDs ya existentes en la BD
+ids_bd_raw = set(pd.read_sql("SELECT id_respuesta FROM raw_encuestas", con)['id_respuesta'].values) if "raw_encuestas" in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() else set()
+ids_bd_clean = set(pd.read_sql("SELECT id_respuesta FROM clean_encuestas", con)['id_respuesta'].values) if "clean_encuestas" in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() else set()
+ids_bd_quar = set(pd.read_sql("SELECT id_respuesta FROM quarantine_encuestas", con)['id_respuesta'].values) if "quarantine_encuestas" in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() else set()
 
-# RAW: sin trazabilidad
-df[COLS].to_sql("raw_encuestas", con, if_exists="append", index=False)
-# CLEAN: con trazabilidad
-dfc = df_clean.assign(_batch_id=batch, _source_file=csv.name, _ingest_ts=ts)
-dfc.to_sql("clean_encuestas", con, if_exists="append", index=False)
-# QUARANTINE: con causa
-if not df_quar.empty:
-    df_quar[COLS + ['causa']].to_sql("quarantine_encuestas", con, if_exists="append", index=False)
+# Filtrar DataFrames: solo registros que NO están en la BD
+df_new = df[~df['id_respuesta'].isin(ids_bd_raw)].drop_duplicates(subset=['id_respuesta'], keep='last')
+df_clean_new = df_clean[~df_clean['id_respuesta'].isin(ids_bd_clean)].drop_duplicates(subset=['id_respuesta'], keep='last')
+df_quar_new = df_quar[~df_quar['id_respuesta'].isin(ids_bd_quar)].drop_duplicates(subset=['id_respuesta'], keep='last')
+
+# Reportar duplicados encontrados
+dup_raw = len(df) - len(df_new)
+dup_clean = len(df_clean) - len(df_clean_new)
+dup_quar = len(df_quar) - len(df_quar_new)
+
+if dup_raw > 0 or dup_clean > 0 or dup_quar > 0:
+    print(f"⚠️ Duplicados encontrados en BD: {dup_raw} (raw) | {dup_clean} (clean) | {dup_quar} (quar)")
+
+# Insertar solo registros nuevos (convertir tipos a compatibles con SQLite)
+if not df_new.empty:
+    df_new_copy = df_new.copy()
+    df_new_copy['fecha'] = df_new_copy['fecha'].astype(str)
+    df_new_copy['edad'] = df_new_copy['edad'].astype('Int64').fillna(0).astype(int)
+    df_new_copy['satisfaccion'] = df_new_copy['satisfaccion'].astype('Int64').fillna(0).astype(int)
+    for _, row in df_new_copy[COLS].iterrows():
+        placeholders = ','.join(['?' for _ in COLS])
+        try:
+            con.execute(f"INSERT INTO raw_encuestas ({','.join(COLS)}) VALUES ({placeholders})", tuple(row))
+        except sqlite3.IntegrityError:
+            pass
+
+if not df_clean_new.empty:
+    df_clean_copy = df_clean_new.copy()
+    df_clean_copy['fecha'] = df_clean_copy['fecha'].astype(str)
+    df_clean_copy['edad'] = df_clean_copy['edad'].astype('Int64').fillna(0).astype(int)
+    df_clean_copy['satisfaccion'] = df_clean_copy['satisfaccion'].astype('Int64').fillna(0).astype(int)
+    dfc_new = df_clean_copy.assign(_batch_id=batch, _source_file=csv.name, _ingest_ts=ts)
+    cols_clean = list(COLS) + ['_batch_id', '_source_file', '_ingest_ts']
+    for _, row in dfc_new.iterrows():
+        placeholders = ','.join(['?' for _ in cols_clean])
+        try:
+            con.execute(f"INSERT INTO clean_encuestas ({','.join(cols_clean)}) VALUES ({placeholders})", tuple(row))
+        except sqlite3.IntegrityError:
+            pass
+
+if not df_quar_new.empty:
+    df_quar_copy = df_quar_new.copy()
+    df_quar_copy['fecha'] = df_quar_copy['fecha'].astype(str)
+    df_quar_copy['edad'] = df_quar_copy['edad'].astype('Int64').fillna(0).astype(int)
+    df_quar_copy['satisfaccion'] = df_quar_copy['satisfaccion'].astype('Int64').fillna(0).astype(int)
+    cols_quar = list(COLS) + ['causa']
+    for _, row in df_quar_copy[cols_quar].iterrows():
+        placeholders = ','.join(['?' for _ in cols_quar])
+        try:
+            con.execute(f"INSERT INTO quarantine_encuestas ({','.join(cols_quar)}) VALUES ({placeholders})", tuple(row))
+        except sqlite3.IntegrityError:
+            pass
+
 con.commit()
 con.close()
-print("✅ SQLite actualizado")
+print(f"✅ SQLite actualizado: {len(df_new):,} (raw) + {len(df_clean_new):,} (clean) + {len(df_quar_new):,} (quar) registros insertados")
 
 # Convertir satisfaccion a string antes de exportar a Parquet (evita ArrowTypeError)
-dfc['satisfaccion'] = dfc['satisfaccion'].astype(str)
-if not df_quar.empty:
-    df_quar['satisfaccion'] = df_quar['satisfaccion'].astype(str)
+if not df_clean_new.empty:
+    df_clean_copy['satisfaccion'] = df_clean_copy['satisfaccion'].astype(str)
+    dfc_for_parquet = df_clean_copy.assign(_batch_id=batch, _source_file=csv.name, _ingest_ts=ts)
+    dfc_for_parquet.to_parquet(PARQ / "clean_encuestas.parquet", index=False)
+    
+if not df_quar_new.empty:
+    df_quar_copy['satisfaccion'] = df_quar_copy['satisfaccion'].astype(str)
+    df_quar_copy.to_parquet(PARQ / "quarantine_encuestas.parquet", index=False)
 
-dfc.to_parquet(PARQ / f"clean_encuestas_{batch}.parquet", index=False)
-if not df_quar.empty:
-    df_quar.to_parquet(PARQ / f"quarantine_encuestas_{batch}.parquet", index=False)
-
-print("✅ Exportación Parquet completada")
 print("✅ Exportación Parquet completada")
 
 # ================================================================
 # 4️⃣ REPORTE HISTÓRICO
 # ================================================================
 print("\n===== [4] REPORTE =====")
-dfs = [pd.read_parquet(f) for f in sorted(PARQ.glob("clean_encuestas_*.parquet"))]
+dfs = [pd.read_parquet(f) for f in sorted(PARQ.glob("clean_encuestas.parquet"))]
 allc = pd.concat(dfs, ignore_index=True)
 allc['fecha'] = pd.to_datetime(allc['fecha'], errors='coerce')
 allc['mes'] = allc['fecha'].dt.to_period('M')
