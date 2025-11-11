@@ -119,14 +119,6 @@ df_new = df[~df['id_respuesta'].isin(ids_bd_raw)].drop_duplicates(subset=['id_re
 df_clean_new = df_clean[~df_clean['id_respuesta'].isin(ids_bd_clean)].drop_duplicates(subset=['id_respuesta'], keep='last')
 df_quar_new = df_quar[~df_quar['id_respuesta'].isin(ids_bd_quar)].drop_duplicates(subset=['id_respuesta'], keep='last')
 
-# Reportar duplicados encontrados
-dup_raw = len(df) - len(df_new)
-dup_clean = len(df_clean) - len(df_clean_new)
-dup_quar = len(df_quar) - len(df_quar_new)
-
-if dup_raw > 0 or dup_clean > 0 or dup_quar > 0:
-    print(f"⚠️ Duplicados encontrados en BD: {dup_raw} (raw) | {dup_clean} (clean) | {dup_quar} (quar)")
-
 # Insertar solo registros nuevos (convertir tipos a compatibles con SQLite)
 if not df_new.empty:
     df_new_copy = df_new.copy()
